@@ -32,13 +32,13 @@ fun TaskItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp), // Apply padding to the Row instead of the inner Column
-        verticalAlignment = Alignment.CenterVertically, // Vertically align items in the row
-        horizontalArrangement = Arrangement.SpaceBetween // Push the delete icon to the end
+            .padding(16.dp)
+            .clickable { onTaskClick(task.id) }, // ADD THIS LINE - Make the entire row clickable
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(
-            // Remove the padding from here as it's now on the Row
-            modifier = Modifier.weight(1f) // Makes this Column take up available space, pushing IconButton to end
+            modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = task.title,
@@ -48,7 +48,7 @@ fun TaskItem(
             Spacer(modifier = Modifier.height(4.dp))
             if (task.description?.isNotBlank() == true) {
                 Text(
-                    text = task.description, // No need for .toString() if description is already String?
+                    text = task.description,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -58,9 +58,7 @@ fun TaskItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary
             )
-            // Add due date if you implement it later
             task.dueDate?.let {
-                // You might want to format the Long timestamp to a readable date string here
                 Text(
                     text = "Due: ${java.text.SimpleDateFormat("MMM dd, yyyy").format(java.util.Date(it))}",
                     style = MaterialTheme.typography.bodySmall
@@ -68,15 +66,14 @@ fun TaskItem(
             }
         }
 
-        // --- ADD THE DELETE BUTTON HERE ---
         IconButton(
-            onClick = { onDeleteClick(task) }, // Call the onDeleteClick lambda
-            modifier = Modifier.align(Alignment.CenterVertically) // Ensure it's centered vertically
+            onClick = { onDeleteClick(task) },
+            modifier = Modifier.align(Alignment.CenterVertically)
         ) {
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "Delete Task",
-                tint = MaterialTheme.colorScheme.error // Make the icon red for danger
+                tint = MaterialTheme.colorScheme.error
             )
         }
     }

@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         Log.d("MainActivity", "MainActivity onCreate called.")
         Toast.makeText(this, "MainActivity Started!", Toast.LENGTH_SHORT).show()
-        //enableEdgeToEdge()
+        enableEdgeToEdge()
         setContent {
             ZenithTasksTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) {
