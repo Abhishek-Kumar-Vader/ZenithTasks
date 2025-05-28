@@ -52,16 +52,16 @@ fun AddEditTaskScreen(
 
     // Use LaunchedEffect to trigger task fetching and update UI state
     LaunchedEffect(taskId) { // Rerun this effect if taskId changes
-        if (taskId != null && taskId != -1L) {
-            // If it's an existing task, tell the ViewModel to load it
+        val toastMessage = if (taskId != null && taskId != -1L) {
             taskViewModel.getTask(taskId)
+            "Edit Task ID: $taskId"
         } else {
-            // If it's a new task, clear any previous currentTask state in ViewModel
             taskViewModel.clearCurrentTask()
-            // And also clear local UI states
             title = ""
             description = ""
+            "Add New Task"
         }
+        Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
     }
 
     // Use LaunchedEffect to update the local UI state when currentTask (from ViewModel) changes
@@ -69,9 +69,17 @@ fun AddEditTaskScreen(
     LaunchedEffect(currentTask) { // Rerun this effect if currentTask from ViewModel changes
         currentTask?.let { task ->
             title = task.title
-            description = task.description ?: "" // Handle nullable description
-            // We will add a state for status later: selectedStatus = task.status
-            Log.d("AddEditTaskScreen", "Received taskId in LaunchedEffect: $taskId")
+            description = task.description ?: ""
+            val taskDetails = "Task loaded: ${task.title} (ID: ${task.id})"
+            Toast.makeText(context, taskDetails, Toast.LENGTH_LONG).show() // <--- ADD/MODIFY THIS TOAST
+            Log.d("AddEditTaskScreen", "Current Task loaded: Title=${task.title}, ID=${task.id}")
+        } ?: run {
+            // This 'else' block for currentTask being null will run when clearing for new tasks
+            // or if no task is found for an ID.
+            if (taskId != null && taskId != -1L) {
+                // Only show this if we *expected* a task but didn't get one
+                Toast.makeText(context, "No task found for ID: $taskId", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
