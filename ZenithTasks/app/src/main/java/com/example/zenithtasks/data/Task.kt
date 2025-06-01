@@ -19,5 +19,6 @@ data class Task(
     val isCompleted: Boolean = false,
     val dueDate: Long? = null,
     val status: TaskStatus = TaskStatus.TODO,
-    val orderIndex: Int = 0
+    val orderIndex: Int = 0,
+    val creationDate: Long = System.currentTimeMillis()
 )

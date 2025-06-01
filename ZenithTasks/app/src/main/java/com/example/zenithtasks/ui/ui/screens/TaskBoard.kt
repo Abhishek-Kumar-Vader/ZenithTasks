@@ -3,6 +3,7 @@ package com.example.zenithtasks.ui.ui.screens
 import android.util.Log
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
@@ -58,8 +60,8 @@ import androidx.compose.runtime.mutableStateListOf
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.example.zenithtasks.viewmodel.TaskViewModel
-//import kotlin.math.minOf // Explicitly import minOf for clarity
-import androidx.compose.foundation.lazy.LazyRow // Ensure this is imported for LazyRow
+//import kotlin.math.minOf
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -74,22 +76,23 @@ fun TaskBoardScreen(
     var currentDragOffset by remember { mutableStateOf(Offset.Zero) }
     var isDraggingTask by remember { mutableStateOf(false) }
     var draggedItemSize by remember { mutableStateOf(IntSize.Zero) }
+
+    // FIX: Declare draggedItemInitialGlobalPosition here
+    var draggedItemInitialGlobalPosition by remember { mutableStateOf(Offset.Zero) }
+
     var draggedItemInitialIndex by remember { mutableStateOf<Int?>(null) } // Original index in its column
     var draggedItemTargetIndex by remember { mutableStateOf<Int?>(null) } // Potential new index in its column
     var draggedItemOriginalStatus by remember { mutableStateOf<TaskStatus?>(null) } // Original status
     var draggedItemTargetStatus by remember { mutableStateOf<TaskStatus?>(null) } // Current hovered target status
 
-    // Using a mutable list to hold and reorder tasks visually during drag for the TARGET column
     val reorderedTasksInTargetColumn = remember { mutableStateListOf<Task>() }
 
-    // Maps to store the global positions and sizes of items and columns
     val taskItemCoordinatesMap = remember { mutableStateMapOf<Long, LayoutCoordinates>() }
     val columnCoordinatesMap = remember { mutableStateMapOf<TaskStatus, LayoutCoordinates>() }
 
-    // LazyListState for each column to enable scrolling during drag
     val lazyListStates = remember {
         mutableStateMapOf<TaskStatus, LazyListState>().apply {
-            TaskStatus.entries.forEach { status -> // Used .entries instead of .values()
+            TaskStatus.entries.forEach { status ->
                 this[status] = LazyListState()
             }
         }
@@ -97,11 +100,11 @@ fun TaskBoardScreen(
 
     val density = LocalDensity.current
 
-    // Helper function to reset all drag-related state variables
     fun resetDragState() {
         draggedTask = null
         isDraggingTask = false
         currentDragOffset = Offset.Zero
+        draggedItemInitialGlobalPosition = Offset.Zero // Reset this too
         draggedItemInitialIndex = null
         draggedItemTargetIndex = null
         draggedItemOriginalStatus = null
@@ -113,40 +116,56 @@ fun TaskBoardScreen(
     val onDragStart: (Task, Offset, TaskStatus) -> Unit = { task, initialTouchOffset, originalStatus ->
         draggedTask = task
         isDraggingTask = true
-        currentDragOffset = Offset.Zero
+        currentDragOffset = Offset.Zero // Reset offset for new drag
         draggedItemOriginalStatus = originalStatus
         draggedItemTargetStatus = originalStatus // Initially, target status is the same as original
         draggedItemInitialIndex = tasks.filter { it.status == originalStatus }.indexOf(task)
+
+        // Capture the global position of the dragged item HERE, when it's attached.
+        // This coordinates object is from the original item, so we check if it's attached before getting position.
+        val originalItemCoords = taskItemCoordinatesMap[task.id]
+        draggedItemInitialGlobalPosition = if (originalItemCoords?.isAttached == true) {
+            originalItemCoords.positionInRoot()
+        } else {
+            // Fallback: If for some reason not attached (unlikely onDragStart),
+            // maybe use a default or log an error.
+            Offset.Zero
+        }
+
 
         // Initialize reorderedTasksInTargetColumn with tasks from the original column
         reorderedTasksInTargetColumn.clear()
         reorderedTasksInTargetColumn.addAll(tasks.filter { it.status == originalStatus })
 
-        Log.d("TaskBoardScreen", "Drag Started for Task: ${task.title} from status: $originalStatus at index: $draggedItemInitialIndex")
+        Log.d("TaskBoardScreen", "Drag Started for Task: ${task.title} from status: $originalStatus at index: $draggedItemInitialIndex. Initial global pos: $draggedItemInitialGlobalPosition")
     }
 
     val onDrag: (Offset) -> Unit = { dragAmount ->
         currentDragOffset += dragAmount
 
         draggedTask?.let { task ->
-            // Calculate the current global position of the dragged item's center
-            val draggedTaskCurrentGlobalPos = (taskItemCoordinatesMap[task.id]?.positionInRoot() ?: Offset.Zero) + currentDragOffset + Offset(draggedItemSize.width / 2f, draggedItemSize.height / 2f)
+            // Calculate draggedTaskCurrentGlobalPos using initial global position + current drag offset
+            // We do NOT query taskItemCoordinatesMap[task.id]?.positionInRoot() here.
+            val draggedTaskCurrentGlobalPos = draggedItemInitialGlobalPosition + currentDragOffset + Offset(draggedItemSize.width / 2f, draggedItemSize.height / 2f)
+
 
             // 1. Detect which column the dragged item is currently over
             var hoveredColumn: TaskStatus? = null
             for ((status, columnCoords) in columnCoordinatesMap) {
-                val columnRect = androidx.compose.ui.geometry.Rect(
-                    columnCoords.positionInRoot(),
-                    columnCoords.size.toSize()
-                )
-                // Check if the dragged item's center is within the column
-                if (columnRect.contains(draggedTaskCurrentGlobalPos)) {
-                    hoveredColumn = status
-                    break
+                // Check columnCoords.isAttached too for safety
+                if (columnCoords.isAttached) {
+                    val columnRect = androidx.compose.ui.geometry.Rect(
+                        columnCoords.positionInRoot(),
+                        columnCoords.size.toSize()
+                    )
+                    if (columnRect.contains(draggedTaskCurrentGlobalPos)) {
+                        hoveredColumn = status
+                        break
+                    }
                 }
             }
 
-            // 2. Handle Column Switching
+            // 2. Handle Column Switching (Visual update)
             if (hoveredColumn != null && draggedItemTargetStatus != hoveredColumn) {
                 draggedItemTargetStatus = hoveredColumn
                 draggedItemTargetIndex = null // Reset target index when switching columns
@@ -160,36 +179,39 @@ fun TaskBoardScreen(
                 return@let // Exit early, let the next onDrag update handle precise positioning in new column
             }
 
-            // 3. Handle Reordering within the current target column
-            val currentTargetStatus = draggedItemTargetStatus ?: return@let
+            // 3. Handle Reordering within the current target column (after a potential switch)
+            val currentTargetStatus = draggedItemTargetStatus ?: return@let // Should be non-null after init/switch
             val tasksInCurrentTargetColumnVisual = reorderedTasksInTargetColumn // Use the visual list directly
 
-            var newCalculatedIndex: Int = tasksInCurrentTargetColumnVisual.size // Default to end
-            var foundTarget = false // Helper to track if target was found in loop
+            val baseTasksInTargetColumn = tasks.filter { it.status == currentTargetStatus && it.id != task.id }
 
-            // Iterate over the *current visual state* of the target column to find the precise drop zone
-            for (i in tasksInCurrentTargetColumnVisual.indices) {
-                val itemInList = tasksInCurrentTargetColumnVisual[i]
-                // If it's the dragged task itself, or if the item is not yet globally positioned, skip
-                if (itemInList.id == task.id || taskItemCoordinatesMap[itemInList.id] == null) continue
+            var newCalculatedIndex: Int = tasksInCurrentTargetColumnVisual.size // Default to end if no specific target found
+            var foundTarget = false
 
-                val itemCoords = taskItemCoordinatesMap[itemInList.id]!! // Now guaranteed non-null
-                val itemRect = itemCoords.positionInRoot().let { pos ->
-                    androidx.compose.ui.geometry.Rect(pos, itemCoords.size.toSize())
-                }
+            // Iterate over the *base tasks* in the target column to find the precise drop zone
+            for (i in baseTasksInTargetColumn.indices) {
+                val itemInList = baseTasksInTargetColumn[i]
+                val itemCoords = taskItemCoordinatesMap[itemInList.id]
+                // Only use coordinates if they are attached
+                if (itemCoords?.isAttached == true) {
+                    val itemRect = itemCoords.positionInRoot().let { pos ->
+                        androidx.compose.ui.geometry.Rect(pos, itemCoords.size.toSize())
+                    }
 
-                // Check if the dragged item's center is above the center of this item
-                if (draggedTaskCurrentGlobalPos.y < itemRect.center.y) {
-                    newCalculatedIndex = i
-                    foundTarget = true
-                    break
+                    // Check if the dragged item's center is above the center of this item
+                    if (draggedTaskCurrentGlobalPos.y < itemRect.center.y) {
+                        newCalculatedIndex = i
+                        foundTarget = true
+                        break
+                    }
                 }
             }
 
-            // If no specific target found (e.g., dragging into an empty column or past last item), default to end
-            if (!foundTarget) {
-                newCalculatedIndex = tasksInCurrentTargetColumnVisual.size // Position after last item
+            // If no specific target found, or list is empty, newCalculatedIndex defaults to size (end)
+            if (!foundTarget && baseTasksInTargetColumn.isEmpty()) {
+                newCalculatedIndex = 0
             }
+
 
             // Apply visual reordering if the calculated index has changed
             if (newCalculatedIndex != draggedItemTargetIndex) {
@@ -198,7 +220,7 @@ fun TaskBoardScreen(
                 if (sourceIndex != -1) { // Ensure the dragged task is in the list
                     tasksInCurrentTargetColumnVisual.apply {
                         val movedItem = removeAt(sourceIndex)
-                        add(minOf(newCalculatedIndex, size), movedItem)
+                        add(minOf(newCalculatedIndex, size), movedItem) // Ensure index is not out of bounds
                     }
                     draggedItemTargetIndex = newCalculatedIndex
                     Log.d("TaskBoardScreen", "Visual Reordering: ${task.title} moved to index $newCalculatedIndex in ${currentTargetStatus}")
@@ -243,10 +265,16 @@ fun TaskBoardScreen(
             val listState = lazyListStates[columnStatus] ?: return@LaunchedEffect
             val listCoords = columnCoordinatesMap[columnStatus] ?: return@LaunchedEffect
 
-            val scrollThreshold = with(density) { 50.dp.toPx() } // Pixels from edge to start scrolling
-            val scrollSpeed = 50 // Pixels to scroll per loop
+            // Check if listCoords is attached before using positionInRoot()
+            if (listCoords.isAttached == false) return@LaunchedEffect
 
-            val draggedItemCenterY = (taskItemCoordinatesMap[draggedTask!!.id]?.positionInRoot() ?: Offset.Zero).y + currentDragOffset.y + (draggedItemSize.height / 2f)
+
+            val scrollThreshold = with(density) { 50.dp.toPx() }
+            val scrollSpeed = 50
+
+            // Calculate draggedItemCenterY based on its absolute floating position from stored initial + current offset
+            val draggedItemCenterY = (draggedItemInitialGlobalPosition + currentDragOffset).y + (draggedItemSize.height / 2f)
+
             val listTop = listCoords.positionInRoot().y
             val listBottom = listTop + listCoords.size.height
 
@@ -257,13 +285,13 @@ fun TaskBoardScreen(
 
                 if (currentFirstVisibleItemIndex > 0 || currentFirstVisibleItemScrollOffset > 0) {
                     listState.scrollBy(-scrollSpeed.toFloat())
-                    delay(16) // Simulate one frame delay
+                    delay(16)
                 }
             }
             // Scroll down
             else if (draggedItemCenterY > listBottom - scrollThreshold) {
                 listState.scrollBy(scrollSpeed.toFloat())
-                delay(16) // Simulate one frame delay
+                delay(16)
             }
         }
     }
@@ -292,7 +320,7 @@ fun TaskBoardScreen(
             contentPadding = PaddingValues(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(TaskStatus.entries) { status -> // Used .entries instead of .values()
+            items(TaskStatus.entries) { status ->
                 val currentTasksToDisplay = if (isDraggingTask && draggedItemTargetStatus == status) {
                     reorderedTasksInTargetColumn
                 } else if (isDraggingTask && draggedItemOriginalStatus == status && draggedItemTargetStatus != status) {
@@ -311,6 +339,19 @@ fun TaskBoardScreen(
                         .onGloballyPositioned { coordinates ->
                             columnCoordinatesMap[status] = coordinates
                         }
+                        .background(
+                            color = if (isDraggingTask && draggedItemTargetStatus == status) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                            shape = MaterialTheme.shapes.medium
+                        )
+                        .border(
+                            width = if (isDraggingTask && draggedItemTargetStatus == status) 2.dp else 0.dp,
+                            color = if (isDraggingTask && draggedItemTargetStatus == status) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            shape = MaterialTheme.shapes.medium
+                        )
                 ) {
                     Column(
                         modifier = Modifier
@@ -331,9 +372,16 @@ fun TaskBoardScreen(
                             state = lazyListState
                         ) {
                             items(currentTasksToDisplay, key = { task -> task.id }) { task ->
+                                // Capture coordinates only if the item is NOT the dragged task's original (to avoid nulling out coords)
+                                // OR if it's attached. If it's the dragged item's original and now detached, remove its coords from map.
                                 val itemModifier = Modifier.onGloballyPositioned { coordinates ->
-                                    taskItemCoordinatesMap[task.id] = coordinates
-                                    if (draggedTask?.id == task.id) {
+                                    if (draggedTask?.id == task.id && !coordinates.isAttached) {
+                                        taskItemCoordinatesMap.remove(task.id)
+                                    } else {
+                                        taskItemCoordinatesMap[task.id] = coordinates
+                                    }
+
+                                    if (draggedTask?.id == task.id) { // Still update size if it's the actual dragged task
                                         draggedItemSize = coordinates.size
                                     }
                                 }
@@ -352,13 +400,12 @@ fun TaskBoardScreen(
                                     onDragStart = { offset -> onDragStart(task, offset, status) },
                                     onDrag = onDrag,
                                     onDragEnd = onDragEnd,
-                                    onDragCancel = onDragCancel,
+                                    onDragCancel = onDragCancel, // This will still get called if the system cancels
                                     currentOffset = Offset.Zero,
                                     isDragging = false,
-                                    modifier = itemModifier.animateItem() // FIX: Changed to .animateItem()
+                                    modifier = itemModifier.animateItem()
                                 )
                             }
-                            // Add a spacer to ensure there's a drop target even in empty columns
                             item {
                                 if (currentTasksToDisplay.isEmpty() && isDraggingTask && draggedItemTargetStatus == status) {
                                     Spacer(
@@ -379,20 +426,19 @@ fun TaskBoardScreen(
         // --- Render the dragged task as a floating item ---
         draggedTask?.let { task ->
             if (isDraggingTask) {
-                val initialItemGlobalPosition = taskItemCoordinatesMap[task.id]?.positionInRoot() ?: Offset.Zero
-                val floatingOffset = initialItemGlobalPosition + currentDragOffset
+                // Floating item's position is always based on stored initial position + current drag offset
+                val floatingOffset = draggedItemInitialGlobalPosition + currentDragOffset
 
                 DraggableTaskItem(
-                    task = task.copy(status = draggedItemTargetStatus ?: task.status), // Show target status on floating item
+                    task = task.copy(status = draggedItemTargetStatus ?: task.status),
                     onTaskClick = { /* No click during drag */ },
                     onDeleteClick = { /* No delete during drag */ },
                     onDragStart = { /* Handled by original item */ },
                     onDrag = { /* Handled by original item */ },
                     onDragEnd = { /* Handled by original item */ },
                     onDragCancel = { /* Handled by original item */ },
-                    currentOffset = Offset.Zero,
+                    currentOffset = Offset.Zero, // This item's actual offset is applied by Modifier.offset
                     isDragging = true,
-                    // FIX: REMOVED .animateItem() from the floating item as it's not needed here
                     modifier = Modifier
                         .offset {
                             IntOffset(

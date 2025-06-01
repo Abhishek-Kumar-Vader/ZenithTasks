@@ -2,7 +2,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
+
 }
 
 android {
@@ -100,4 +102,11 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation ("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // Dagger Hilt
+    implementation("com.google.dagger:hilt-android:2.51") // Use the same version as above
+    kapt("com.google.dagger:hilt-android-compiler:2.51") // Use the same version as above
+
+    // Hilt for Compose (optional, but good practice for ViewModel integration)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 }
