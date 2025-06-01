@@ -18,5 +18,6 @@ data class Task(
     val description: String?,
     val isCompleted: Boolean = false,
     val dueDate: Long? = null,
-    val status: TaskStatus = TaskStatus.TODO
+    val status: TaskStatus = TaskStatus.TODO,
+    val orderIndex: Int = 0
 )

@@ -99,7 +99,5 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // --- REMOVED: Date Picker (androidx.compose.material3:material3-datetime-pickers:1.3.0) ---
-    // This dependency was causing the "Could not resolve" error. We can add it back later if needed
-    // and troubleshoot its specific version or repository then.
+    implementation ("androidx.compose.material:material-icons-extended:1.7.8")
 }
