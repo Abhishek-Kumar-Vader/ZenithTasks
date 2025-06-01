@@ -11,7 +11,7 @@ import com.example.zenithtasks.data.TaskDao
 
 // Define your entities and database version here.
 // Make sure to increment version every time you change the schema.
-@Database(entities = [Task::class], version = 2, exportSchema = false)
+@Database(entities = [Task::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 

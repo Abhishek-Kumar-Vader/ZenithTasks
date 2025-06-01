@@ -13,4 +13,12 @@ class Converters {
     fun dateToTimestamp(date: Date?): Long? {
         return date?.time
     }
+    @TypeConverter // <--- NEW TYPE CONVERTER FOR TASKPRIORITY
+    fun fromTaskPriority(priority: TaskPriority?): String? {
+        return priority?.name
+    }
+    @TypeConverter // <--- NEW TYPE CONVERTER FOR TASKPRIORITY
+    fun toTaskPriority(priorityString: String?): TaskPriority? {
+        return priorityString?.let { TaskPriority.valueOf(it) }
+    }
 }

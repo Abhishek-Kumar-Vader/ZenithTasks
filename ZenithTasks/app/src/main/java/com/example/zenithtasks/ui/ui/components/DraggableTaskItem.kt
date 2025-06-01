@@ -23,15 +23,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+// Check this import carefully! Make sure it's the Compose UI Color.
+import androidx.compose.ui.graphics.Color // <--- ENSURE THIS IS THE ONLY Color IMPORT
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -43,10 +40,18 @@ import com.example.zenithtasks.data.TaskStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.foundation.clickable // Ensure clickable is here for onClick
-import androidx.compose.ui.tooling.preview.Preview // <--- ADD THIS IMPORT
-import com.example.zenithtasks.ui.ui.themes.ZenithTasksTheme
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.tooling.preview.Preview
 import java.util.Calendar
+
+// Imports for Task Priority and Colors
+import com.example.zenithtasks.data.TaskPriority
+import com.example.zenithtasks.ui.ui.themes.PriorityHigh
+import com.example.zenithtasks.ui.ui.themes.PriorityLow
+import com.example.zenithtasks.ui.ui.themes.PriorityMedium
+import com.example.zenithtasks.ui.ui.themes.PriorityUrgent
+import com.example.zenithtasks.ui.ui.themes.ZenithTasksTheme
+
 
 @Composable
 fun DraggableTaskItem(
@@ -157,7 +162,7 @@ fun DraggableTaskItem(
             if (!task.description.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = task.description!!, // Use !! if you're sure it's not null here or add a default
+                    text = task.description!!,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 3,
@@ -165,21 +170,39 @@ fun DraggableTaskItem(
                 )
             }
 
-            // --- ADDED: Creation Date ---
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Created: ${SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(task.creationDate))}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-            // --- END ADDED Creation Date ---
+            Spacer(modifier = Modifier.height(4.dp)) // Spacer before dates/priority
 
-            // Due date (if available) - THIS WAS ALREADY HERE, JUST CONFIRMING PLACEMENT
-            task.dueDate?.let { dueDate ->
-                Spacer(modifier = Modifier.height(8.dp)) // Adjust spacing as needed
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // --- Priority and Dates Row ---
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp), // Space between elements
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Priority Indicator
+                Box(
+                    modifier = Modifier
+                        .size(10.dp) // Slightly larger dot for priority
+                        .background(
+                            color = getPriorityColor(task.priority), // <--- Use priority color
+                            shape = CircleShape
+                        )
+                )
+                Text(
+                    text = task.priority.name.replace("_", " "), // Display priority name
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+
+                // Creation Date
+                Text(
+                    text = "Created: ${SimpleDateFormat("MMM dd,yyyy", Locale.getDefault()).format(Date(task.creationDate))}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+
+                // Due date (if available)
+                task.dueDate?.let { dueDate ->
+                    Spacer(modifier = Modifier.width(8.dp)) // Spacer between creation and due date
                     Box(
                         modifier = Modifier
                             .size(6.dp)
@@ -194,7 +217,7 @@ fun DraggableTaskItem(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Due: ${SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(dueDate))}",
+                        text = "Due: ${SimpleDateFormat("MMM dd,yyyy", Locale.getDefault()).format(Date(dueDate))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (dueDate < System.currentTimeMillis()) {
                             MaterialTheme.colorScheme.error
@@ -204,6 +227,8 @@ fun DraggableTaskItem(
                     )
                 }
             }
+            // --- End Priority and Dates Row ---
+
 
             // Status indicator (only show on floating item during drag)
             if (isDragging) {
@@ -237,18 +262,30 @@ private fun getStatusColor(status: TaskStatus): Color {
     }
 }
 
-@Preview(showBackground = true, widthDp = 300, showSystemUi = false) // You can adjust widthDp as needed
+@Composable
+private fun getPriorityColor(priority: TaskPriority): Color {
+    return when (priority) {
+        TaskPriority.LOW -> PriorityLow
+        TaskPriority.MEDIUM -> PriorityMedium
+        TaskPriority.HIGH -> PriorityHigh
+        TaskPriority.URGENT -> PriorityUrgent
+    }
+}
+
+
+@Preview(showBackground = true, widthDp = 300, showSystemUi = false)
 @Composable
 fun DraggableTaskItemPreview() {
-    ZenithTasksTheme { // Wrap your preview in your app's theme
+    ZenithTasksTheme {
         val sampleTask1 = Task(
             id = 1L,
             title = "Design new app icon and splash screen",
             description = "Explore different visual styles and color palettes. Focus on a modern, clean look.",
             isCompleted = false,
-            dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 3) }.timeInMillis, // 3 days from now
+            dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 3) }.timeInMillis,
             status = TaskStatus.TODO,
-            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -5) }.timeInMillis // 5 days ago
+            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -5) }.timeInMillis,
+            priority = TaskPriority.HIGH
         )
 
         val sampleTask2 = Task(
@@ -256,22 +293,34 @@ fun DraggableTaskItemPreview() {
             title = "Implement Dagger Hilt for DI",
             description = "Refactor existing manual dependency injection setup to use Hilt modules.",
             isCompleted = false,
-            dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis, // Yesterday (overdue)
+            dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -1) }.timeInMillis,
             status = TaskStatus.IN_PROGRESS,
-            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -10) }.timeInMillis // 10 days ago
+            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -10) }.timeInMillis,
+            priority = TaskPriority.URGENT
         )
 
         val sampleTask3 = Task(
             id = 3L,
             title = "Write unit tests for ViewModel logic",
-            description = null, // No description
+            description = null,
             isCompleted = true,
-            dueDate = null, // No due date
+            dueDate = null,
             status = TaskStatus.DONE,
-            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -2) }.timeInMillis // 2 days ago
+            creationDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -2) }.timeInMillis,
+            priority = TaskPriority.LOW
         )
 
-        Column(modifier = Modifier.padding(16.dp)) { // Add a column to stack multiple previews
+        val sampleTask4 = sampleTask1.copy(
+            id = 4L,
+            title = "Review Q3 Marketing Strategy",
+            description = "Consolidate feedback from sales and product teams.",
+            status = TaskStatus.TODO,
+            priority = TaskPriority.MEDIUM,
+            dueDate = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 10) }.timeInMillis
+        )
+
+
+        Column(modifier = Modifier.padding(16.dp)) {
             DraggableTaskItem(
                 task = sampleTask1,
                 onTaskClick = { /* Preview click */ },
@@ -280,7 +329,7 @@ fun DraggableTaskItemPreview() {
                 onDrag = { /* Preview drag */ },
                 onDragEnd = { /* Preview drag */ },
                 onDragCancel = { /* Preview drag */ },
-                isDragging = false // Not dragging in preview
+                isDragging = false
             )
             Spacer(modifier = Modifier.height(16.dp))
             DraggableTaskItem(
@@ -291,7 +340,7 @@ fun DraggableTaskItemPreview() {
                 onDrag = { /* Preview drag */ },
                 onDragEnd = { /* Preview drag */ },
                 onDragCancel = { /* Preview drag */ },
-                isDragging = false // Not dragging in preview
+                isDragging = false
             )
             Spacer(modifier = Modifier.height(16.dp))
             DraggableTaskItem(
@@ -302,19 +351,30 @@ fun DraggableTaskItemPreview() {
                 onDrag = { /* Preview drag */ },
                 onDragEnd = { /* Preview drag */ },
                 onDragCancel = { /* Preview drag */ },
-                isDragging = false // Not dragging in preview
+                isDragging = false
             )
             Spacer(modifier = Modifier.height(16.dp))
-            // You can also preview the dragging state
             DraggableTaskItem(
-                task = sampleTask1.copy(status = TaskStatus.IN_PROGRESS), // Show it as if it's being dragged to another status
+                task = sampleTask4,
                 onTaskClick = { /* Preview click */ },
                 onDeleteClick = { /* Preview delete */ },
                 onDragStart = { /* Preview drag */ },
                 onDrag = { /* Preview drag */ },
                 onDragEnd = { /* Preview drag */ },
                 onDragCancel = { /* Preview drag */ },
-                isDragging = true // Show in dragging state
+                isDragging = false
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            DraggableTaskItem(
+                task = sampleTask1.copy(status = TaskStatus.IN_PROGRESS, priority = TaskPriority.HIGH),
+                onTaskClick = { /* Preview click */ },
+                onDeleteClick = { /* Preview delete */ },
+                onDragStart = { /* Preview drag */ },
+                onDrag = { /* Preview drag */ },
+                onDragEnd = { /* Preview drag */ },
+                onDragCancel = { /* Preview drag */ },
+                currentOffset = Offset(20f, 20f),
+                isDragging = true
             )
         }
     }

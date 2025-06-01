@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import androidx.compose.ui.graphics.Color // Import Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
@@ -25,10 +26,10 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = DarkTertiary,
     tertiaryContainer = DarkTertiaryContainer,
     onTertiary = DarkOnTertiary,
-    background = DarkBackground,
+    background = Color.Transparent, // <--- CHANGE THIS TO Color.Transparent
     onBackground = DarkOnBackground,
     surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant, // Used for subtle variations like card backgrounds
+    surfaceVariant = DarkSurfaceVariant,
     onSurface = DarkOnSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
     error = DarkError,
@@ -45,10 +46,10 @@ private val LightColorScheme = lightColorScheme(
     tertiary = LightTertiary,
     tertiaryContainer = LightTertiaryContainer,
     onTertiary = LightOnTertiary,
-    background = LightBackground,
+    background = Color.Transparent, // <--- CHANGE THIS TO Color.Transparent
     onBackground = LightOnBackground,
     surface = LightSurface,
-    surfaceVariant = LightSurfaceVariant, // Used for subtle variations like card backgrounds
+    surfaceVariant = LightSurfaceVariant,
     onSurface = LightOnSurface,
     onSurfaceVariant = LightOnSurfaceVariant,
     error = LightError,
@@ -58,8 +59,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun ZenithTasksTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true, // We can keep this true or set to false for strict custom colors
+    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -81,7 +81,7 @@ fun ZenithTasksTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // We'll define this next
+        typography = Typography,
         content = content
     )
 }

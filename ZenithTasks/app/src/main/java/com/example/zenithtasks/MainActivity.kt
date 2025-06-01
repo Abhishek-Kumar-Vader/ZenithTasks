@@ -26,20 +26,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             ZenithTasksTheme {
-                // We will replace Surface with a Box that contains the image and then the content
-                Box(modifier = Modifier.fillMaxSize()) { // Use Box as the main container
+                Box(modifier = Modifier.fillMaxSize()) {
                     Image(
-                        painter = painterResource(id = R.drawable.zenith_task_bg), // REPLACE 'your_wallpaper_name' with your image file name
+                        painter = painterResource(id = R.drawable.main_screen),
                         contentDescription = "Background wallpaper",
                         modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop // Scales the image to fill the bounds, cropping if necessary
+                        contentScale = ContentScale.Crop
                     )
 
                     // Your existing Surface for content goes on top of the image
                     Surface(
                         modifier = Modifier.fillMaxSize(),
-                        // IMPORTANT: Make the Surface background transparent or semi-transparent
-                        // so the wallpaper can show through.
                         color = Color.Transparent
                     ) {
                         AppNavigation()

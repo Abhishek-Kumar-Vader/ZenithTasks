@@ -2,6 +2,8 @@ package com.example.zenithtasks.ui.ui.screens
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,44 +16,56 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults // Explicitly imported for OutlinedTextFieldDefaults.colors
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.zenithtasks.data.Task // Import your Task data class
+import com.example.zenithtasks.R
+import com.example.zenithtasks.data.Task
+import com.example.zenithtasks.data.TaskStatus
 import com.example.zenithtasks.viewmodel.TaskViewModel
+
+// NEW IMPORTS FOR DROPDOWN AND PRIORITY
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import com.example.zenithtasks.data.TaskPriority // Import TaskPriority enum
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditTaskScreen(
     navController: NavController,
-    taskViewModel: TaskViewModel, // <--- NOW ACCEPTING TASKVIEWMODEL
-    taskId: Long? = null // Now accepting optional taskId
+    taskViewModel: TaskViewModel,
+    taskId: Long? = null
 ) {
     val context = LocalContext.current
 
-    // State for input fields
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var selectedPriority by remember { mutableStateOf(TaskPriority.MEDIUM) } // State for selected priority
+    var expanded by remember { mutableStateOf(false) } // State for dropdown menu expansion
 
-    // Observe the currentTask from the ViewModel
-    // This will be updated by taskViewModel.getTask() call in LaunchedEffect
     val currentTask by taskViewModel.currentTask.collectAsState()
 
-    // Use LaunchedEffect to trigger task fetching and update UI state
-    LaunchedEffect(taskId) { // Rerun this effect if taskId changes
+    LaunchedEffect(taskId) {
         val toastMessage = if (taskId != null && taskId != -1L) {
             taskViewModel.getTask(taskId)
             "Edit Task ID: $taskId"
@@ -59,101 +73,183 @@ fun AddEditTaskScreen(
             taskViewModel.clearCurrentTask()
             title = ""
             description = ""
+            selectedPriority = TaskPriority.MEDIUM // Set default priority for new tasks
             "Add New Task"
         }
         Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
     }
 
-    // Use LaunchedEffect to update the local UI state when currentTask (from ViewModel) changes
-    // This ensures input fields are pre-filled when editing an existing task
-    LaunchedEffect(currentTask) { // Rerun this effect if currentTask from ViewModel changes
+    LaunchedEffect(currentTask) {
         currentTask?.let { task ->
             title = task.title
             description = task.description ?: ""
+            selectedPriority = task.priority // Pre-fill priority for editing
             val taskDetails = "Task loaded: ${task.title} (ID: ${task.id})"
-            Toast.makeText(context, taskDetails, Toast.LENGTH_LONG).show() // <--- ADD/MODIFY THIS TOAST
+            Toast.makeText(context, taskDetails, Toast.LENGTH_LONG).show()
             Log.d("AddEditTaskScreen", "Current Task loaded: Title=${task.title}, ID=${task.id}")
         } ?: run {
-            // This 'else' block for currentTask being null will run when clearing for new tasks
-            // or if no task is found for an ID.
             if (taskId != null && taskId != -1L) {
-                // Only show this if we *expected* a task but didn't get one
                 Toast.makeText(context, "No task found for ID: $taskId", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (taskId != null && taskId != -1L) "Edit Task" else "Add New Task") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            // Using your specified background image name
+            painter = painterResource(id = R.drawable.add_edit_bg),
+            contentDescription = "Add/Edit Task Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Scaffold(
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    title = { Text(if (taskId != null && taskId != -1L) "Edit Task" else "Add New Task") },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Task Title") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors( // Corrected usage of OutlinedTextFieldDefaults.colors
+                        focusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                        unfocusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.LightGray,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Task Description") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    colors = OutlinedTextFieldDefaults.colors( // Corrected usage of OutlinedTextFieldDefaults.colors
+                        focusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                        unfocusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = Color.LightGray,
+                        cursorColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // --- PRIORITY DROPDOWN MENU ---
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = selectedPriority.name.replace("_", " "), // Display readable name
+                        onValueChange = { /* Read only */ },
+                        readOnly = true,
+                        label = { Text("Priority") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier
+                            .menuAnchor() // REQUIRED for ExposedDropdownMenuBox
+                            .fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors( // Corrected usage for dropdown's text field
+                            focusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                            unfocusedContainerColor = Color.DarkGray.copy(alpha = 0.7f),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = Color.Gray,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = Color.LightGray,
+                            cursorColor = MaterialTheme.colorScheme.primary
                         )
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        TaskPriority.entries.forEach { priorityOption ->
+                            DropdownMenuItem(
+                                text = { Text(priorityOption.name.replace("_", " ")) },
+                                onClick = {
+                                    selectedPriority = priorityOption
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                 }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 8.dp), // Add some screen padding
-            horizontalAlignment = Alignment.CenterHorizontally,
-            // Arrangement.Top is the default, and it's what you want for fields at the top
-            // verticalArrangement = Arrangement.Top // No need to explicitly set if it's the default
-        ) {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("Task Title") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true // Typically titles are single line
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("Task Description") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp) // Provide more space for description
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                // --- END PRIORITY DROPDOWN MENU ---
 
-            Button(
-                onClick = {
-                    if (title.isNotBlank()) {
-                        // Create a Task object. If taskId is -1L, it's new. Otherwise, use currentTask's ID.
-                        val taskToSave = currentTask?.copy( // Use currentTask if editing, or create new Task
-                            title = title,
-                            description = description.takeIf { it.isNotBlank() }, // Save null if description is empty
-                            // Keep other properties from currentTask or default
-                            // (e.g., isCompleted, dueDate, status will retain original values if not changed on this screen yet)
-                        ) ?: Task(
-                            title = title,
-                            description = description.takeIf { it.isNotBlank() },
-                            // Default values for new task:
-                            id = 0L, // Room auto-generates for 0L
-                            isCompleted = false,
-                            dueDate = null,
-                            status = com.example.zenithtasks.data.TaskStatus.TODO // Specify full path
-                        )
+                Spacer(modifier = Modifier.height(16.dp))
 
-                        taskViewModel.saveTask(taskToSave) // <--- Use the consolidated saveTask
-                        Toast.makeText(context, "Task saved!", Toast.LENGTH_SHORT).show()
-                        navController.popBackStack()
-                    } else {
-                        Toast.makeText(context, "Title cannot be empty!", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (taskId != null && taskId != -1L) "Update Task" else "Save Task")
+                Button(
+                    onClick = {
+                        if (title.isNotBlank()) {
+                            val taskToSave = currentTask?.copy(
+                                title = title,
+                                description = description.takeIf { it.isNotBlank() },
+                                priority = selectedPriority // Save selected priority
+                            ) ?: Task(
+                                title = title,
+                                description = description.takeIf { it.isNotBlank() },
+                                id = 0L,
+                                isCompleted = false,
+                                dueDate = null,
+                                status = TaskStatus.TODO,
+                                priority = selectedPriority // Save selected priority for new task
+                            )
+
+                            taskViewModel.saveTask(taskToSave)
+                            Toast.makeText(context, "Task saved!", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        } else {
+                            Toast.makeText(context, "Title cannot be empty!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (taskId != null && taskId != -1L) "Update Task" else "Save Task")
+                }
             }
         }
     }

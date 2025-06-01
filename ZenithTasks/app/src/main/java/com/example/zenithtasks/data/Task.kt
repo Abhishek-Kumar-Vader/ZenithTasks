@@ -20,5 +20,6 @@ data class Task(
     val dueDate: Long? = null,
     val status: TaskStatus = TaskStatus.TODO,
     val orderIndex: Int = 0,
-    val creationDate: Long = System.currentTimeMillis()
+    val creationDate: Long = System.currentTimeMillis(),
+    val priority: TaskPriority = TaskPriority.MEDIUM
 )

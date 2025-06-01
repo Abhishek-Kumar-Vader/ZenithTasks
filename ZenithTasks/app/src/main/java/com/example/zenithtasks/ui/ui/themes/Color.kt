@@ -39,3 +39,10 @@ val DarkOnSurface = Color(0xFFE6E1E5)
 val DarkOnSurfaceVariant = Color(0xFFC4C7C5)
 val DarkError = Color(0xFFCF6679)
 val DarkOnError = Color.Black
+
+// --- NEW: Priority Colors ---
+val PriorityLow = Color(0xFF4CAF50)    // Green
+val PriorityMedium = Color(0xFFFFC107) // Amber/Yellow
+val PriorityHigh = Color(0xFFFF9800)  // Orange
+val PriorityUrgent = Color(0xFFF44336) // Red
+// --- END NEW Priority Colors ---
