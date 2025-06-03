@@ -73,6 +73,7 @@ dependencies {
     // --- Room Database ---
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
+    implementation(libs.protolite.well.known.types)
     kapt("androidx.room:room-compiler:2.6.1")
 
     // --- ViewModel ---
@@ -109,4 +110,6 @@ dependencies {
 
     // Hilt for Compose (optional, but good practice for ViewModel integration)
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 }

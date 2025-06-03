@@ -6,27 +6,22 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow // <-- Ensure this is imported for Flow<Task?>
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TaskDao {
-    @Query("SELECT * FROM tasks ORDER BY id ASC")
-    fun getAllTasks(): Flow<List<Task>>
-
-    // CHANGE THIS LINE:
-    // Make it return a Flow<Task?> so you can observe it, and take Long for taskId
     @Query("SELECT * FROM tasks WHERE id = :taskId")
-    fun getTaskById(taskId: Long): Flow<Task?> // Changed to return Flow and accept Long
+    fun getTaskById(taskId: Long): Flow<Task?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTask(task: Task)
+    suspend fun insertTask(task: Task): Long
 
     @Update
-    suspend fun updateTask(task: Task)
+    suspend fun updateTask(task: Task): Int
 
     @Delete
     suspend fun deleteTask(task: Task)
 
-    @Query("DELETE FROM tasks")
-    suspend fun deleteAllTasks()
+    @Query("SELECT * FROM tasks WHERE status = :status")
+    fun getTasksByStatus(status: TaskStatus): Flow<List<Task>>
 }

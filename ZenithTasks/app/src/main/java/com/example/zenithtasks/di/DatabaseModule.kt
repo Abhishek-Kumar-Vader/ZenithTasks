@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import com.example.zenithtasks.data.TaskDao
 import com.example.zenithtasks.data.AppDatabase
+import com.example.zenithtasks.notifications.AlarmScheduler
+import com.example.zenithtasks.notifications.AlarmSchedulerImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,5 +34,12 @@ object DatabaseModule {
     @Singleton // TaskDao should also be a singleton if the database is
     fun provideTaskDao(database: AppDatabase): TaskDao {
         return database.taskDao()
+    }
+
+    // NEW: Provide AlarmScheduler
+    @Provides
+    @Singleton
+    fun provideAlarmScheduler(@ApplicationContext context: Context): AlarmScheduler {
+        return AlarmSchedulerImpl(context)
     }
 }

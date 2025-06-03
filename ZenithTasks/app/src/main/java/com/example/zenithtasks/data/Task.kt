@@ -7,19 +7,34 @@ import java.util.Date
 enum class TaskStatus {
     TODO,
     IN_PROGRESS,
-    DONE
+    DONE,
+    CANCELLED
 }
+
+// <--- ADD THIS Priority ENUM DEFINITION HERE IN Task.kt --- >
+enum class Priority {
+    URGENT,
+    HIGH,
+    MEDIUM,
+    LOW;
+
+    // Helper to get a list in desired sorting order
+    companion object {
+        fun getOrderedPriorities(): List<Priority> {
+            return listOf(URGENT, HIGH, MEDIUM, LOW)
+        }
+    }
+}
+// <--- END ADDITION --- >
 
 @Entity(tableName = "tasks")
 data class Task(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0L, // CHANGED FROM Int to Long
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val title: String,
-    val description: String?,
+    val description: String? = null,
     val isCompleted: Boolean = false,
-    val dueDate: Long? = null,
+    val dueDate: Date? = null,
     val status: TaskStatus = TaskStatus.TODO,
-    val orderIndex: Int = 0,
-    val creationDate: Long = System.currentTimeMillis(),
-    val priority: TaskPriority = TaskPriority.MEDIUM
+    val priority: Priority = Priority.MEDIUM,
+    val creationDate: Date = Date(System.currentTimeMillis())
 )

@@ -4,17 +4,9 @@ import kotlinx.coroutines.flow.Flow
 
 class TaskRepository(private val taskDao: TaskDao) {
 
-    // --- Data Streams from DAO ---
-    // Expose Flow from DAO to ViewModel/UI
-    fun getAllTasks(): Flow<List<Task>> {
-        return taskDao.getAllTasks()
-    }
-
     fun getTaskById(taskId: Long): Flow<Task?> {
         return taskDao.getTaskById(taskId)
     }
-
-    // --- CRUD Operations (suspend functions for background execution) ---
 
     suspend fun insertTask(task: Task) {
         taskDao.insertTask(task)
@@ -24,12 +16,20 @@ class TaskRepository(private val taskDao: TaskDao) {
         taskDao.updateTask(task)
     }
 
-    // This is the primary method for deletion we'll use first
     suspend fun deleteTask(task: Task) {
         taskDao.deleteTask(task)
     }
 
-    suspend fun deleteAllTasks() {
-        taskDao.deleteAllTasks()
+    fun getTasksByStatus(status: TaskStatus): Flow<List<Task>> {
+        return taskDao.getTasksByStatus(status)
+    }
+
+    suspend fun upsert(task: Task): Long {
+        return if (task.id == 0L) {
+            taskDao.insertTask(task) // Returns the new row ID (Long)
+        } else {
+            taskDao.updateTask(task) // Returns Int (rows affected), but we need task.id for upsert's return
+            task.id // <--- Return the existing ID for updates
+        }
     }
 }
