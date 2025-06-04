@@ -18,47 +18,60 @@ import androidx.compose.ui.graphics.Color // Import Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkPrimary,
-    primaryContainer = DarkPrimaryContainer,
     onPrimary = DarkOnPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkSecondary,
-    secondaryContainer = DarkSecondaryContainer,
     onSecondary = DarkOnSecondary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
     tertiary = DarkTertiary,
-    tertiaryContainer = DarkTertiaryContainer,
     onTertiary = DarkOnTertiary,
-    background = Color.Transparent, // <--- CHANGE THIS TO Color.Transparent
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiaryContainer = DarkOnTertiaryContainer,
+    error = DarkError,
+    onError = DarkOnError,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
+    background = DarkBackground,
     onBackground = DarkOnBackground,
     surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant,
     onSurface = DarkOnSurface,
+    surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
-    error = DarkError,
-    onError = DarkOnError
+    outline = DarkOutline
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = LightPrimary,
-    primaryContainer = LightPrimaryContainer,
     onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
     secondary = LightSecondary,
-    secondaryContainer = LightSecondaryContainer,
     onSecondary = LightOnSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
     tertiary = LightTertiary,
-    tertiaryContainer = LightTertiaryContainer,
     onTertiary = LightOnTertiary,
-    background = Color.Transparent, // <--- CHANGE THIS TO Color.Transparent
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    error = LightError,
+    onError = LightOnError,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
+    background = LightBackground,
     onBackground = LightOnBackground,
     surface = LightSurface,
-    surfaceVariant = LightSurfaceVariant,
     onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
-    error = LightError,
-    onError = LightOnError
+    outline = LightOutline
 )
 
 @Composable
 fun ZenithTasksTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = isSystemInDarkTheme(), // DEFAULT to system theme
+    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

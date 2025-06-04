@@ -74,6 +74,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     implementation(libs.protolite.well.known.types)
+    implementation(libs.androidx.datastore.core.android)
     kapt("androidx.room:room-compiler:2.6.1")
 
     // --- ViewModel ---
@@ -112,4 +113,6 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+
+    implementation ("androidx.datastore:datastore-preferences:1.0.0")
 }

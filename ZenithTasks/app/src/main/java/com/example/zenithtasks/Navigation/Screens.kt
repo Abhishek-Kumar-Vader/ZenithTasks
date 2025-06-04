@@ -1,6 +1,6 @@
 package com.example.zenithtasks.Navigation
 
-sealed class Screen(val route: String, val title: String) { // Added title for bottom nav labels
+sealed class Screen(val route: String, val title: String? = null) { // Added title for bottom nav labels
     object TaskBoard : Screen("task_board_screen", "Board") // Keeping this for now, might be removed later
     object AddEditTask : Screen("add_edit_task_screen", "Add/Edit Task") {
         fun createRoute(taskId: Long? = null) = "add_edit_task_screen?taskId=$taskId"
@@ -11,6 +11,8 @@ sealed class Screen(val route: String, val title: String) { // Added title for b
     object InProgressTasks : Screen("in_progress_tasks_screen", "In Progress")
     object DoneTasks : Screen("done_tasks_screen", "Done")
     object CancelledTasks : Screen("cancelled_tasks_screen", "Cancelled")
+    object Search : Screen("search")
+    object ArchivedTasks : Screen("archived_tasks")
 
     // Helper object for easy access to routes, if you prefer
     companion object {
@@ -22,17 +24,12 @@ sealed class Screen(val route: String, val title: String) { // Added title for b
     }
 }
 
-// If you were using a top-level object named Screens, you would update it like this:
 object Screens {
-//    val TaskBoard = "task_board_screen" // Keep for now
-//    val AddEditTask = object { // Nested object for route creation
-//        val route = "add_edit_task_screen"
-//        fun createRoute(taskId: Long? = null) = "add_edit_task_screen?taskId=$taskId"
-//    }
-
     // New routes for tabbed screens
     val TodoTasks = "todo_tasks_screen"
     val InProgressTasks = "in_progress_tasks_screen"
     val DoneTasks = "done_tasks_screen"
     val CancelledTasks = "cancelled_tasks_screen"
+    val Search = "search"
+    val ArchivedTasks = "archived_tasks"
 }

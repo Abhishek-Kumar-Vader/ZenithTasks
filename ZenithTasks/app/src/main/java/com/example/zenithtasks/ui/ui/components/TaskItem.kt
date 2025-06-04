@@ -1,6 +1,7 @@
+// In TaskItem.kt
 package com.example.zenithtasks.ui.ui.components
 
-import android.content.res.Configuration // Added for Preview
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,11 +12,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Archive // Import Archive icon
+import androidx.compose.material.icons.filled.Restore // NEW IMPORT for Restore icon
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -27,74 +35,124 @@ import com.example.zenithtasks.data.TaskStatus
 import com.example.zenithtasks.ui.ui.themes.ZenithTasksTheme
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale // Added for SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun TaskItem(
     task: Task,
-    modifier: Modifier = Modifier,
     onTaskClick: (Long) -> Unit,
     onDeleteClick: (Task) -> Unit,
+    onToggleCompletion: (Task, Boolean) -> Unit,
+    onArchiveClick: (Task) -> Unit,
+    onRestoreClick: (Task) -> Unit // NEW: Add onRestoreClick parameter
 ) {
+    val showDeleteDialog = remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .clickable { onTaskClick(task.id) }, // Make the entire row clickable
+            .clickable { onTaskClick(task.id) }
+            .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            if (task.description?.isNotBlank() == true) {
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-            Text(
-                text = "Status: ${task.status.name.replace("_", " ")}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            task.dueDate?.let {
-                // CORRECTED LINE HERE: Pass 'it' directly to format()
-                Text(
-                    text = "Due: ${SimpleDateFormat("MMM dd,yyyy", Locale.getDefault()).format(it)}", // Added Locale.getDefault() for robustness
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            // You might want to add Priority display here as well, similar to TaskItemCard
-            Text(
-                text = "Priority: ${task.priority.name}",
-                style = MaterialTheme.typography.bodySmall,
-                color = when (task.priority) {
-                    Priority.URGENT -> MaterialTheme.colorScheme.error
-                    Priority.HIGH -> MaterialTheme.colorScheme.primary
-                    Priority.MEDIUM -> MaterialTheme.colorScheme.secondary
-                    Priority.LOW -> MaterialTheme.colorScheme.tertiary
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = task.isCompleted,
+                onCheckedChange = { isChecked ->
+                    onToggleCompletion(task, isChecked)
                 }
             )
+            Column(modifier = Modifier.padding(start = 8.dp)) {
+                Text(
+                    text = task.title,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                task.description?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                task.dueDate?.let {
+                    val sdf = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                    Text(
+                        text = "Due: ${sdf.format(it)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = "Priority: ${task.priority.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Status: ${task.status.name}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
 
-        IconButton(
-            onClick = { onDeleteClick(task) },
-            modifier = Modifier.align(Alignment.CenterVertically)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Delete Task",
-                tint = MaterialTheme.colorScheme.error
-            )
+        Row {
+            // Conditionally display Archive or Restore button
+            if (task.status == TaskStatus.ARCHIVED) {
+                IconButton(onClick = { onRestoreClick(task) }) { // NEW: Restore action
+                    Icon(
+                        imageVector = Icons.Default.Restore,
+                        contentDescription = "Restore Task",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                IconButton(onClick = { onArchiveClick(task) }) { // Archive action (for non-archived tasks)
+                    Icon(
+                        imageVector = Icons.Default.Archive,
+                        contentDescription = "Archive Task",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            IconButton(onClick = { showDeleteDialog.value = true }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Task",
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
+    }
+
+    if (showDeleteDialog.value) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog.value = false },
+            title = { Text("Confirm Delete") },
+            text = { Text("Are you sure you want to delete this task?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteClick(task)
+                        showDeleteDialog.value = false
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog.value = false // Just dismiss the dialog
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -102,33 +160,39 @@ fun TaskItem(
 @Composable
 fun TaskItemPreview() {
     ZenithTasksTheme {
-        Column { // Wrap in a Column to display multiple items
+        Column {
             TaskItem(
                 task = Task(
                     id = 1,
-                    title = "Sample To Do Task",
-                    description = "This is a detailed description for the task.",
+                    title = "Buy Groceries",
+                    description = "Milk, Eggs, Bread",
                     isCompleted = false,
-                    dueDate = Date(), // Use current date for preview
+                    dueDate = Date(),
                     status = TaskStatus.TODO,
                     priority = Priority.HIGH
                 ),
                 onTaskClick = {},
-                onDeleteClick = {}
+                onDeleteClick = {},
+                onToggleCompletion = { _, _ -> },
+                onArchiveClick = {}, // Provide empty lambda for preview
+                onRestoreClick = {} // Provide empty lambda for preview
             )
-            Spacer(Modifier.height(8.dp)) // Add space between preview items
+            Spacer(Modifier.height(8.dp))
             TaskItem(
                 task = Task(
                     id = 2,
-                    title = "Another Task",
-                    description = null, // Null description
+                    title = "Finished Archived Report",
+                    description = "Draft for Q2 earnings",
                     isCompleted = true,
-                    dueDate = Date(System.currentTimeMillis() + 86400000), // Tomorrow
-                    status = TaskStatus.DONE,
-                    priority = Priority.LOW
+                    dueDate = Date(),
+                    status = TaskStatus.ARCHIVED, // Preview archived task
+                    priority = Priority.URGENT
                 ),
                 onTaskClick = {},
-                onDeleteClick = {}
+                onDeleteClick = {},
+                onToggleCompletion = { _, _ -> },
+                onArchiveClick = {}, // Provide empty lambda for preview
+                onRestoreClick = {} // Provide empty lambda for preview
             )
         }
     }

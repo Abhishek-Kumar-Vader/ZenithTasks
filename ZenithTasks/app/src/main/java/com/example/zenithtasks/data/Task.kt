@@ -8,7 +8,8 @@ enum class TaskStatus {
     TODO,
     IN_PROGRESS,
     DONE,
-    CANCELLED
+    CANCELLED,
+    ARCHIVED
 }
 
 // <--- ADD THIS Priority ENUM DEFINITION HERE IN Task.kt --- >
@@ -35,6 +36,6 @@ data class Task(
     val isCompleted: Boolean = false,
     val dueDate: Date? = null,
     val status: TaskStatus = TaskStatus.TODO,
-    val priority: Priority = Priority.MEDIUM,
+    val priority: Priority,
     val creationDate: Date = Date(System.currentTimeMillis())
 )

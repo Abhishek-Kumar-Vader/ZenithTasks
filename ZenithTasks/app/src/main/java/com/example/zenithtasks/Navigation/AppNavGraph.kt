@@ -3,10 +3,12 @@ package com.example.zenithtasks.Navigation
 import android.util.Log // Added import
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomAppBar
@@ -31,10 +33,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.zenithtasks.ui.ui.screens.AddEditTaskScreen
+import com.example.zenithtasks.ui.ui.screens.ArchivedTasksScreen
 import com.example.zenithtasks.ui.ui.screens.CancelledTasksScreen
 import com.example.zenithtasks.ui.ui.screens.DoneTasksScreen
 import com.example.zenithtasks.ui.ui.screens.InProgressTasksScreen
-import com.example.zenithtasks.ui.ui.screens.TodoTasksScreen
+import com.example.zenithtasks.ui.ui.screens.SearchScreen
+import com.example.zenithtasks.ui.ui.screens.ToDoTaskScreen
 import com.example.zenithtasks.viewmodel.TaskViewModel // <--- Ensure this is imported
 
 // Define data class for Bottom Navigation Items (moved here from MainActivity for cleaner separation)
@@ -55,7 +59,9 @@ fun AppNavGraph(
         BottomNavItem("To Do", Icons.Default.List, Screens.TodoTasks),
         BottomNavItem("In Progress", Icons.Default.PlayCircle, Screens.InProgressTasks),
         BottomNavItem("Done", Icons.Default.CheckCircle, Screens.DoneTasks),
-        BottomNavItem("Cancelled", Icons.Default.Cancel, Screens.CancelledTasks)
+        BottomNavItem("Cancelled", Icons.Default.Cancel, Screens.CancelledTasks),
+//        BottomNavItem("Search", Icons.Default.Search, Screens.Search),
+//        BottomNavItem("Archived", Icons.Default.Archive, Screen.ArchivedTasks.route)
     )
 
     Scaffold(
@@ -96,7 +102,7 @@ fun AppNavGraph(
             modifier = Modifier.padding(paddingValues)
         ) {
             composable(Screens.TodoTasks) {
-                TodoTasksScreen(navController = navController, taskViewModel = taskViewModel)
+                ToDoTaskScreen(navController = navController, taskViewModel = taskViewModel)
             }
             composable(Screens.InProgressTasks) {
                 InProgressTasksScreen(navController = navController, taskViewModel = taskViewModel)
@@ -106,6 +112,12 @@ fun AppNavGraph(
             }
             composable(Screens.CancelledTasks) {
                 CancelledTasksScreen(navController = navController, taskViewModel = taskViewModel)
+            }
+            composable(Screens.Search) {
+                SearchScreen(navController = navController, taskViewModel = taskViewModel)
+            }
+            composable(Screen.ArchivedTasks.route) {
+                ArchivedTasksScreen(navController = navController)
             }
             composable(
                 route = "${Screen.AddEditTask.route}?taskId={taskId}",
@@ -122,7 +134,7 @@ fun AppNavGraph(
                 AddEditTaskScreen(
                     navController   = navController,
                     taskViewModel   = taskViewModel,
-                    taskId          = if (taskId == -1L) null else taskId
+                    taskId          = taskId
                 )
             }
         }

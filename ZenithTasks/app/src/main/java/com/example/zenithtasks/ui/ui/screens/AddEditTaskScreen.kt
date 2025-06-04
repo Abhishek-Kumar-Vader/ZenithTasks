@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -27,14 +26,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults // NEW IMPORT
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-// import androidx.compose.material3.TextFieldDefaults // <--- DELETE THIS LINE
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,96 +43,159 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.zenithtasks.Navigation.Screens
+import androidx.navigation.compose.rememberNavController
+import com.example.zenithtasks.Navigation.Screen
 import com.example.zenithtasks.R
 import com.example.zenithtasks.data.Priority
 import com.example.zenithtasks.data.Task
 import com.example.zenithtasks.data.TaskStatus
+import com.example.zenithtasks.ui.ui.themes.ZenithTasksTheme
 import com.example.zenithtasks.viewmodel.TaskViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.text.SimpleDateFormat
+import androidx.compose.runtime.collectAsState
 import java.util.Locale
-import androidx.compose.material3.OutlinedTextFieldDefaults // Make sure this is imported!
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditTaskScreen(
     navController: NavController,
-    taskId: Long?,
+    taskId: Long = 0L,
     taskViewModel: TaskViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val isEditMode = taskId != -1L && taskId != null
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var dueDate: Date? by remember { mutableStateOf(null) }
-    var isCompleted by remember { mutableStateOf(false) }
-    var selectedStatus by remember { mutableStateOf(TaskStatus.TODO) }
-    var selectedPriority by remember { mutableStateOf(Priority.MEDIUM) }
-
-    var statusExpanded by remember { mutableStateOf(false) }
+    var selectedDueDate by remember { mutableStateOf<Date?>(null) }
+    var selectedPriority by remember { mutableStateOf(Priority.LOW) } // Default priority
     var priorityExpanded by remember { mutableStateOf(false) }
-
+    var selectedStatus by remember { mutableStateOf(TaskStatus.TODO) } // Default status
+    var statusExpanded by remember { mutableStateOf(false) }
+    var isCompleted by remember { mutableStateOf(false) }
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+    val isEditMode = taskId != 1L
+    // Fetch task if ID is provided (for editing)
     LaunchedEffect(taskId) {
         if (isEditMode) {
-            taskViewModel.getTaskById(taskId!!).collect { task ->
-                task?.let {
-                    title = it.title
-                    description = it.description ?: ""
-                    dueDate = it.dueDate
-                    isCompleted = it.isCompleted
-                    selectedStatus = it.status
-                    selectedPriority = it.priority
-                }
-            }
+            taskViewModel.loadTask(taskId!!)
         }
+    }
+    val task by taskViewModel.selectedTask.collectAsState()
+    LaunchedEffect(task) {
+        task?.let { task ->
+            title = task.title
+            description = task.description ?: ""
+            selectedDueDate = task.dueDate
+            selectedStatus = task.status
+            selectedPriority = task.priority
+            isCompleted = task.isCompleted // Initialize isCompleted from the task
+        }
+    }
+
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val newCalendar = Calendar.getInstance()
+                newCalendar.set(year, month, dayOfMonth)
+                val currentDueDate = selectedDueDate ?: Date() // Use current due date if available, otherwise new Date
+                val currentCalendar = Calendar.getInstance().apply { time = currentDueDate }
+                newCalendar.set(Calendar.HOUR_OF_DAY, currentCalendar.get(Calendar.HOUR_OF_DAY))
+                newCalendar.set(Calendar.MINUTE, currentCalendar.get(Calendar.MINUTE))
+                selectedDueDate = newCalendar.time
+            },
+            Calendar.getInstance().get(Calendar.YEAR),
+            Calendar.getInstance().get(Calendar.MONTH),
+            Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    val timePickerDialog = remember {
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                val newCalendar = Calendar.getInstance()
+                val currentDueDate = selectedDueDate ?: Date() // Use current due date if available, otherwise new Date
+                newCalendar.time = currentDueDate
+                newCalendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+                newCalendar.set(Calendar.MINUTE, minute)
+                selectedDueDate = newCalendar.time
+            },
+            Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
+            Calendar.getInstance().get(Calendar.MINUTE),
+            false // 24 hour view
+        )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = if (isEditMode) "Edit Task" else "Add New Task", color = MaterialTheme.colorScheme.onPrimary) },
+                title = { Text(if (taskId == 0L) "Add Task" else "Edit Task") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onPrimary)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        val currentTask = Task(
-                            id = taskId ?: 0L,
-                            title = title,
-                            description = description.ifBlank { null },
-                            dueDate = dueDate,
-                            isCompleted = isCompleted,
-                            status = selectedStatus,
-                            priority = selectedPriority
+                    IconButton(
+                        onClick = {
+                            if (title.isBlank()) {
+                                Toast.makeText(context, "Title cannot be empty", Toast.LENGTH_SHORT).show()
+                                return@IconButton
+                            }
+
+                            val task = if (taskId == 0L) {
+                                Task(
+                                    title = title,
+                                    description = description.ifBlank { null },
+                                    dueDate = selectedDueDate,
+                                    priority = selectedPriority,
+                                    status = selectedStatus // Use selected status for new tasks
+                                )
+                            } else {
+                                Task(
+                                    id = taskId,
+                                    title = title,
+                                    description = description.ifBlank { null },
+                                    dueDate = selectedDueDate,
+                                    priority = selectedPriority,
+                                    status = selectedStatus, // Update status for existing tasks
+                                    isCompleted = selectedStatus == TaskStatus.DONE // Sync isCompleted with status
+                                )
+                            }
+
+                            if (taskId == 0L) {
+                                taskViewModel.updateTask(task)
+                                Toast.makeText(context, "Task Added", Toast.LENGTH_SHORT).show()
+                            } else {
+                                taskViewModel.insertTask(task)
+                                Toast.makeText(context, "Task Updated", Toast.LENGTH_SHORT).show()
+                            }
+                            navController.popBackStack()
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Save Task",
+                            tint = MaterialTheme.colorScheme.onPrimary
                         )
-
-                        if (title.isBlank()) {
-                            Toast.makeText(context, "Task title cannot be empty", Toast.LENGTH_SHORT).show()
-                            return@IconButton
-                        }
-
-                        if (isEditMode) {
-                            taskViewModel.updateTask(currentTask)
-                            Toast.makeText(context, "Task Updated", Toast.LENGTH_SHORT).show()
-                        } else {
-                            taskViewModel.insertTask(currentTask)
-                            Toast.makeText(context, "Task Added", Toast.LENGTH_SHORT).show()
-                        }
-                        navController.popBackStack()
-                    }) {
-                        Icon(Icons.Default.Check, contentDescription = "Save Task", tint = MaterialTheme.colorScheme.onPrimary)
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                }
             )
         }
     ) { paddingValues ->
@@ -145,149 +206,106 @@ fun AddEditTaskScreen(
         ) {
             Image(
                 painter = painterResource(id = R.drawable.add_edit_bg),
-                contentDescription = "Background wallpaper",
+                contentDescription = "Background",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.FillBounds
             )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Task Title Input
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Task Title") },
+                    label = { Text("Title") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors( // <--- CORRECTED HERE
-                        focusedBorderColor = Color.Black,
-                        unfocusedBorderColor = Color.DarkGray,
-                        focusedLabelColor = Color.Black,
-                        unfocusedLabelColor = Color.DarkGray,
-                        focusedTextColor = Color.Black, // <--- Use Color.Black for pitch black text
-                        unfocusedTextColor = Color.Black // <--- Use Color.Black for pitch black text
+                    colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
 
-                // Task Description Input
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description (Optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors( // <--- CORRECTED HERE
-                        focusedBorderColor = Color.Black,
-                        unfocusedBorderColor = Color.DarkGray,
-                        focusedLabelColor = Color.Black,
-                        unfocusedLabelColor = Color.DarkGray,
-                        focusedTextColor = Color.Black, // <--- Use Color.Black for pitch black text
-                        unfocusedTextColor = Color.Black // <--- Use Color.Black for pitch black text
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp), // Increased height for description
+                    singleLine = false,
+                    colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
 
-                // Due Date Picker (no direct OutlinedTextField, so no change needed here)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "Due Date: ${dueDate?.let { SimpleDateFormat("MMM dd,yyyy HH:mm", Locale.getDefault()).format(it) } ?: "Not set"}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Black // Make text darker
-                    )
-                    Button(onClick = {
-                        val calendar = Calendar.getInstance().apply {
-                            dueDate?.let { time = it }
-                        }
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, dayOfMonth ->
-                                calendar.set(year, month, dayOfMonth)
-                                TimePickerDialog(
-                                    context,
-                                    { _, hourOfDay, minute ->
-                                        calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                                        calendar.set(Calendar.MINUTE, minute)
-                                        dueDate = calendar.time
-                                    },
-                                    calendar.get(Calendar.HOUR_OF_DAY),
-                                    calendar.get(Calendar.MINUTE),
-                                    false
-                                ).show()
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
-                        ).show()
-                    }) {
-                        Text("Set Due Date")
-                    }
-                }
-
-                // Is Completed Checkbox (no direct OutlinedTextField, but making text darker)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Checkbox(
-                        checked = isCompleted,
-                        onCheckedChange = { checked ->
-                            isCompleted = checked
-                            selectedStatus = if (checked) TaskStatus.DONE else TaskStatus.TODO
-                        }
-                    )
-                    Text("Mark as Completed", color = Color.Black) // Make text darker
-                }
-
-                // Task Status Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = statusExpanded,
-                    onExpandedChange = { statusExpanded = !statusExpanded },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                    // Date Picker
                     OutlinedTextField(
-                        value = selectedStatus.name.replace("_", " "),
-                        onValueChange = {},
+                        value = selectedDueDate?.let { dateFormatter.format(it) } ?: "",
+                        onValueChange = { /* Read-only */ },
+                        label = { Text("Due Date") },
                         readOnly = true,
-                        label = { Text("Status") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors( // <--- CORRECTED HERE
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = Color.DarkGray,
-                            focusedLabelColor = Color.Black,
-                            unfocusedLabelColor = Color.DarkGray,
-                            focusedTextColor = Color.Black, // <--- Use Color.Black for pitch black text
-                            unfocusedTextColor = Color.Black // <--- Use Color.Black for pitch black text
+                        modifier = Modifier.weight(1f),
+                        trailingIcon = {
+                            IconButton(onClick = { datePickerDialog.show() }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.outline_calendar_month_24),
+                                    contentDescription = "Select Date"
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
-                    ExposedDropdownMenu(
-                        expanded = statusExpanded,
-                        onDismissRequest = { statusExpanded = false }
-                    ) {
-                        TaskStatus.entries.forEach { status ->
-                            DropdownMenuItem(
-                                text = { Text(status.name.replace("_", " "), color = Color.Black) }, // Make dropdown text darker
-                                onClick = {
-                                    selectedStatus = status
-                                    isCompleted = status == TaskStatus.DONE
-                                    statusExpanded = false
-                                }
-                            )
-                        }
-                    }
+
+                    // Time Picker
+                    OutlinedTextField(
+                        value = selectedDueDate?.let { timeFormatter.format(it) } ?: "",
+                        onValueChange = { /* Read-only */ },
+                        label = { Text("Due Time") },
+                        readOnly = true,
+                        modifier = Modifier.weight(1f),
+                        trailingIcon = {
+                            IconButton(onClick = { timePickerDialog.show() }) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.outline_alarm_24),
+                                    contentDescription = "Select Time"
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
                 }
 
-                // Task Priority Dropdown
+                // Priority Dropdown
                 ExposedDropdownMenuBox(
                     expanded = priorityExpanded,
                     onExpandedChange = { priorityExpanded = !priorityExpanded },
@@ -295,20 +313,20 @@ fun AddEditTaskScreen(
                 ) {
                     OutlinedTextField(
                         value = selectedPriority.name,
-                        onValueChange = {},
+                        onValueChange = { /* Read-only */ },
                         readOnly = true,
                         label = { Text("Priority") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = priorityExpanded) },
                         modifier = Modifier
                             .menuAnchor()
                             .fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors( // <--- CORRECTED HERE
-                            focusedBorderColor = Color.Black,
-                            unfocusedBorderColor = Color.DarkGray,
-                            focusedLabelColor = Color.Black,
-                            unfocusedLabelColor = Color.DarkGray,
-                            focusedTextColor = Color.Black, // <--- Use Color.Black for pitch black text
-                            unfocusedTextColor = Color.Black // <--- Use Color.Black for pitch black text
+                        colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         )
                     )
                     ExposedDropdownMenu(
@@ -317,7 +335,7 @@ fun AddEditTaskScreen(
                     ) {
                         Priority.entries.forEach { priority ->
                             DropdownMenuItem(
-                                text = { Text(priority.name, color = Color.Black) }, // Make dropdown text darker
+                                text = { Text(priority.name, color = MaterialTheme.colorScheme.onSurface) }, // Ensure text color adapts
                                 onClick = {
                                     selectedPriority = priority
                                     priorityExpanded = false
@@ -326,7 +344,59 @@ fun AddEditTaskScreen(
                         }
                     }
                 }
+
+                // Status Dropdown (only for existing tasks, or if you want to explicitly set initial status)
+                // If it's a new task, it's typically TODO by default.
+                // If editing, allow changing status.
+                if (taskId != 0L) { // Only show status dropdown when editing an existing task
+                    ExposedDropdownMenuBox(
+                        expanded = statusExpanded,
+                        onExpandedChange = { statusExpanded = !statusExpanded },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = selectedStatus.name,
+                            onValueChange = { /* Read-only */ },
+                            readOnly = true,
+                            label = { Text("Status") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors( // Use MaterialTheme colors
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                        ExposedDropdownMenu(
+                            expanded = statusExpanded,
+                            onDismissRequest = { statusExpanded = false }
+                        ) {
+                            TaskStatus.entries.forEach { status ->
+                                DropdownMenuItem(
+                                    text = { Text(status.name, color = MaterialTheme.colorScheme.onSurface) }, // Ensure text color adapts
+                                    onClick = {
+                                        selectedStatus = status
+                                        statusExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AddEditTaskScreenPreview() {
+    ZenithTasksTheme {
+        AddEditTaskScreen(navController = rememberNavController())
     }
 }
